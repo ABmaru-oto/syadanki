@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>踏切遮断桿シミュレーション（支点80cm固定・非遮断時真上450cm）</title>
+<style>
+  body { font-family: sans-serif; }
+  #info { margin-top: 10px; font-size: 16px; }
+</style>
+</head>
+<body>
+
+<h2>踏切遮断桿シミュレーション</h2>
+<p>左端支点は高さ80cm固定。非遮断時は真上450cm。右端をドラッグして回転させてください。</p>
+
+<!-- 描画用SVG（縦方向 0〜500cm を想定） -->
+<svg id="svg" width="1200" height="700" style="border:1px solid #ccc; background:#f9f9f9;">
+  <!-- 地面（0cm） -->
+  <line x1="0" y1="650" x2="1200" y2="650" stroke="black" stroke-width="3"/>
+
+  <!-- 支点（左端）高さ80cm → y = 650 - 80 = 570 -->
+  <circle id="pivot" cx="150" cy="570" r="8" fill="black"/>
+
+  <!-- 遮断桿（初期状態：真上450cm） -->
+  <!-- 先端高さ450cm → y = 650 - 450 = 200 -->
+  <line id="bar" x1="150" y1="570" x2="150" y2="200"
+        stroke="red" stroke-width="10" stroke-linecap="round"/>
+
+  <!-- 先端マーカー -->
+  <circle id="tip" cx="150" cy="200" r="8" fill="blue"/>
+</svg>
+
+<div id="info">
+  支点高さ: 80cm / 先端高さ: 450cm / 桿の長さ: ---cm / 角度: ---°
+</div>
+
+<script>
+const svg = document.getElementById("svg");
+const bar = document.getElementById("bar");
+const tip = document.getElementById("tip");
+const pivot = document.getElementById("pivot");
+const info = document.getElementById("info");
+
+let dragging = false;
+
+// 支点の位置（固定）
+const pxPivotX = 150;
+const pxPivotY = 650 - 80; // 570
+
+svg.addEventListener("mousedown", startDrag);
+svg.addEventListener("mousemove", drag);
+svg.addEventListener("mouseup", endDrag);
+svg.addEventListener("mouseleave", endDrag);
+
+function startDrag(e) {
+  dragging = true;
+}
+
+function drag(e) {
+  if (!dragging) return;
+
+  const rect = svg.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+
+  // 支点からのベクトル
+  const dx = mouseX - pxPivotX;
+  const dy = mouseY - pxPivotY;
+
+  // 遮断桿の長さ（非遮断時の長さを基準に固定）
+  const baseDx = 0;
+  const baseDy = 200 - 570; // -370
+  const baseLen = Math.sqrt(baseDx * baseDx + baseDy * baseDy); // 370px
+
+  // 現在のマウス方向に、長さ370pxのベクトルを伸ばす
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+  const scale = baseLen / len;
+  const tipX = pxPivotX + dx * scale;
+  const tipY = pxPivotY + dy * scale;
+
+  // 先端の位置を更新
+  bar.setAttribute("x1", pxPivotX);
+  bar.setAttribute("y1", pxPivotY);
+  bar.setAttribute("x2", tipX);
+  bar.setAttribute("y2", tipY);
+
+  tip.setAttribute("cx", tipX);
+  tip.setAttribute("cy", tipY);
+
+  // 高さ(cm)に変換：高さ = 650 - y
+  const hPivot = 650 - pxPivotY;   // 常に80cm
+  const hTip = 650 - tipY;         // 先端高さ
+
+  // 桿の長さ（pxをそのままcmとみなす）
+  const barLenCm = baseLen; // 370cm相当
+
+  // 角度（真上を0°として、時計回りを正）
+  const vx = tipX - pxPivotX;
+  const vy = tipY - pxPivotY;
+  const angleRad = Math.atan2(vx, -vy);
+  const angleDeg = angleRad * 180 / Math.PI;
+
+  info.textContent =
+    `支点高さ: ${hPivot.toFixed(1)}cm / 先端高さ: ${hTip.toFixed(1)}cm / 桿の長さ: ${barLenCm.toFixed(1)}cm / 角度: ${angleDeg.toFixed(1)}°`;
+}
+
+function endDrag() {
+  dragging = false;
+}
+</script>
+
+</body>
+</html>
